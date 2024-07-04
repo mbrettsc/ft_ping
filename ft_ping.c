@@ -6,25 +6,29 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 11:31:40 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/04 15:02:23 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/04 16:32:16 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_ping.h"
-#include <getopt.h>
 
-char* dns_resolver(const char *hostname)
+void free_all(struct s_ping *ping)
+{
+    free(ping->options);
+}
+
+void dns_resolver(struct s_ping *ping)
 {
     struct addrinfo hints, *res;
-
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_RAW;
     
-    if (getaddrinfo(hostname, NULL, &hints, &res) != 0)
+    if (getaddrinfo(ping->dns, NULL, &hints, &res) != 0)
     {
         fprintf(stderr, "getaddrinfo: hostname cannot be resolved\n");
+        free_all(ping);
         exit(EXIT_FAILURE);
     }
 
@@ -32,12 +36,11 @@ char* dns_resolver(const char *hostname)
     char *ip_address = inet_ntoa(ipv4->sin_addr);
     freeaddrinfo(res);
 
-    return ip_address;
+    ping->ip_address = ip_address;
 }
 
 void parse_options(int ac, char **av, struct s_ping *ping)
 {
-    char *hostname;
     int i = 1, host_flag = 0;
 
     if (ac < 2)
@@ -88,14 +91,14 @@ void parse_options(int ac, char **av, struct s_ping *ping)
                 fprintf(stderr, "Error: Too many arguments\n");
                 exit(EXIT_FAILURE);
             }
-            hostname = av[i];
+            ping->dns = av[i];
             host_flag = 1;
         }
         ++i;
     }
     printf("Count: %d\n", ping->options->count);
     
-    printf("Hostname: %s\n", hostname);
+    printf("Hostname: %s\n", ping->dns);
 }
 
 struct s_ping init_ping()
@@ -105,22 +108,20 @@ struct s_ping init_ping()
     ping.ip = NULL;
     ping.icmp = NULL;
     ping.dns = NULL;
+    ping.ip_address = NULL;
     ping.options = malloc(sizeof(struct s_options));    
 
     return ping;
 }
 
-void free_all(struct s_ping *ping)
-{
-    free(ping->options);
-}
-
 int main(int ac, char** av)
 {
     struct s_ping ping = init_ping();
+    
     parse_options(ac, av, &ping);
-    char * ip_address = dns_resolver(av[1]);
-    printf("IP address: %s\n", ip_address);
+    dns_resolver(&ping);
+    printf("ip address = %s\n", ping.ip_address);
     free_all(&ping);
+    
     return 0;
 }

@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 11:31:44 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/04 13:55:04 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/04 16:29:41 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,7 @@ struct s_ping {
     struct iphdr *ip;
     struct icmphdr *icmp;
     char *dns;
+    char *ip_address;
 };
 
 #endif
