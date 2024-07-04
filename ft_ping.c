@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 11:31:40 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/04 16:32:16 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/04 17:01:03 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,7 +85,6 @@ void parse_options(int ac, char **av, struct s_ping *ping)
         }
         else if (av[i][0] != '-')
         {
-            printf("debug 2\n");
             if (host_flag == 1)
             {
                 fprintf(stderr, "Error: Too many arguments\n");
@@ -96,9 +95,6 @@ void parse_options(int ac, char **av, struct s_ping *ping)
         }
         ++i;
     }
-    printf("Count: %d\n", ping->options->count);
-    
-    printf("Hostname: %s\n", ping->dns);
 }
 
 struct s_ping init_ping()
@@ -114,13 +110,23 @@ struct s_ping init_ping()
     return ping;
 }
 
+void send_icmp_request(struct s_ping *ping)
+{
+    if ((ping->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1)
+    {
+        printf("socket fd = %d\n", ping->sockfd);
+        fprintf(stderr, "Error: An error occurred while trying to open socket fd\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(int ac, char** av)
 {
     struct s_ping ping = init_ping();
     
     parse_options(ac, av, &ping);
     dns_resolver(&ping);
-    printf("ip address = %s\n", ping.ip_address);
+    send_icmp_request(&ping);
     free_all(&ping);
     
     return 0;
