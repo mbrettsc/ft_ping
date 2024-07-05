@@ -26,6 +26,8 @@
 # include <errno.h>
 # include <ctype.h>
 
+# define PKT_SIZE 64
+
 struct s_options {
     int count;
     int interval;
@@ -36,14 +38,14 @@ struct s_options {
 };
 
 struct s_ping {
-    int sockfd;
-    struct s_options *options;
-    struct sockaddr_in dest;
-    struct sockaddr_in from;
-    struct iphdr *ip;
-    struct icmphdr *icmp;
-    char *dns;
-    char *ip_address;
+    int _sockfd;
+    struct s_options *_options;
+    struct sockaddr_in _dest;
+    struct icmphdr _icmp;
+    struct iphdr _iphdr;
+    char *_dns;
+    char *_ip;
+    char *_packet[PKT_SIZE];
 };
 
 #endif
