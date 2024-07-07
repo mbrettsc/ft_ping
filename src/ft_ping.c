@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 11:31:40 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/07 14:34:23 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/07 15:47:15 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,10 +82,6 @@ static void init_ping()
 
 int main(int ac, char **av)
 {
-    if (geteuid() != 0) {
-        fprintf(stderr, "This program must be run as root. Please try again with 'sudo'.\n");
-        exit(EXIT_FAILURE);
-    }
     init_ping();
     parse_options(ac, av);
     dns_lookup();

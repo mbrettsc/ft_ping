@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/06 17:41:36 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/07 14:35:20 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/07 15:50:41 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,10 +73,10 @@ void parse_options(int ac, char **av)
     int i = 1, host_flag = 0;
 
     if (ac < 2) {
-        print_usage();
+        fprintf(stderr, "ft_ping: missing host operand\nTry 'ping -?' for more information.\n");
         exit(EXIT_FAILURE);
     }
-
+    
     while (i < ac) {
         if (av[i][0] == '-') {
             options(av, ac, &i);
@@ -93,6 +93,11 @@ void parse_options(int ac, char **av)
 
     if (!host_flag) {
         fprintf(stderr, "Error: No host specified\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (geteuid() != 0) {
+        fprintf(stderr, "ft_ping: Lacking privilege for icmp socket.\n");
         exit(EXIT_FAILURE);
     }
 }
