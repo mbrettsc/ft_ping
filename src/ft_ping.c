@@ -6,128 +6,91 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 11:31:40 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/06 17:48:46 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/07 14:34:23 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_ping.h"
 
-struct ping_pkt {
-    struct icmphdr hdr;
-    char msg[PKT_SIZE];
-};
+struct s_ping g_ping = {0};
 
-void exit_error(char *err_msg)
+static void sig_handler(int signo)
 {
-    fprintf(stderr, "ft_ping: error: %s", err_msg);
-    exit(EXIT_FAILURE);
+    (void)signo;
+    print_statistics();
+    free_all();
+    exit(EXIT_SUCCESS);
 }
 
-unsigned short calculate_checksum(void *b, int len)
+static void allocate_memory_for_structs()
 {
-    unsigned short *buf = b;
-    unsigned int sum = 0;
-    unsigned short result;
-
-    for (sum = 0; len > 1; len -= 2)
-        sum += *buf++;
-    if (len == 1)
-        sum += *(unsigned char *)buf;
-    sum = (sum >> 16) + (sum & 0xFFFF);
-    sum += (sum >> 16);
-    result = ~sum;
-    return result;
+    g_ping._rtt = malloc(sizeof(struct s_rtt));
+    g_ping._options = malloc(sizeof(struct s_options));
+    g_ping._time = malloc(sizeof(struct s_time));
 }
 
-void current_time_microseconds(struct timeval *tv)
+static void check_memory_allocation()
 {
-    gettimeofday(tv, NULL);
-}
-
-// Calculate the difference in milliseconds between two timevals
-double time_difference(struct timeval *start, struct timeval *end)
-{
-    return (double)((end->tv_sec - start->tv_sec) * 1000.0 + (end->tv_usec - start->tv_usec) / 1000.0);
-}
-
-// Main ping loop function
-void icmp_loop(struct s_ping *ping) {
-    struct sockaddr_in dest_addr, recv_addr;
-    struct ping_pkt pckt;
-    int sequence_number = 1, packets_sent = 0, packets_received = 0;
-    struct timeval send_time, receive_time;
-    char recv_buffer[84];
-
-    
-    if ((ping->_sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1)
-        exit_error("failed to open socket fd");
-
-    if (setsockopt(ping->_sockfd, IPPROTO_IP, IP_TTL, &ping->_options->ttl, sizeof(ping->_options->ttl)) != 0)
-        exit_error("failet to set socket options");
-
-    memset(&dest_addr, 0, sizeof(dest_addr));
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = 0;
-    dest_addr.sin_addr.s_addr = inet_addr(ping->_ip);
-
-    socklen_t addr_len = sizeof(dest_addr);
-
-    printf("PING %s (%s) 56(84) bytes of data.\n", ping->_host, ping->_ip);
-
-    while (1)
-    {
-        memset(&pckt, 0, sizeof(pckt));
-        pckt.hdr.type = ICMP_ECHO;
-        pckt.hdr.un.echo.id = getpid();
-        pckt.hdr.un.echo.sequence = sequence_number++;
-        pckt.hdr.checksum = calculate_checksum(&pckt, sizeof(pckt));
-
-        current_time_microseconds(&send_time);
-
-        if (sendto(ping->_sockfd, &pckt, sizeof(pckt), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) <= 0)
-            exit_error("failed to send packet");
-
-        if (recvfrom(ping->_sockfd, recv_buffer, sizeof(recv_buffer), 0, (struct sockaddr *)&recv_addr, &addr_len) <= 0)
-            exit_error("failed to receive packet");
-        else
-        {
-            current_time_microseconds(&receive_time);
-            double rtt = time_difference(&send_time, &receive_time);
-
-            // Extract TTL from the IP header
-            struct iphdr *ip_hdr = (struct iphdr *)recv_buffer;
-            int ttl = ip_hdr->ttl;
-            
-            // Extract ICMP header and sequence number
-            struct icmphdr *icmp_hdr = (struct icmphdr *)(recv_buffer + (ip_hdr->ihl * 4));
-            int sequence = icmp_hdr->un.echo.sequence;
-            
-            printf("64 bytes from %s (%s): icmp_seq=%d ttl=%d time=%.1f ms\n", 
-                   ping->_dns, ping->_ip, sequence, ttl, rtt);
-
-            packets_received++;
-        }
-
-        if (ping->_options->count != 0 && sequence_number >= ping->_options->count)
-            break;
-        
-        packets_sent++;
-        sleep(1);
+    if (!g_ping._rtt || !g_ping._options || !g_ping._time) {
+        exit_error("failed to allocate memory");
     }
-    printf("\n--- %s ping statistics ---\n", ping->_ip);
-    printf("%d packets transmitted, %d received, %.1f%% packet loss\n",
-           packets_sent, packets_received, ((packets_sent - packets_received) / (float)packets_sent) * 100.0);
 }
 
-
-int main(int ac, char** av)
+static void initialize_rtt()
 {
-    struct s_ping ping = init_ping();
-    
-    parse_options(ac, av, &ping);
-    dns_lookup(&ping);
-    icmp_loop(&ping);
-    free_all(&ping);
-    
+    g_ping._rtt->min_rtt = DBL_MAX;
+    g_ping._rtt->max_rtt = 0.0;
+    g_ping._rtt->total_rtt = 0.0;
+    g_ping._rtt->total_rtt_squared = 0.0;
+    g_ping._rtt->count = 0;
+    g_ping._rtt->total_time_ms = 0;
+}
+
+static void initialize_options()
+{
+    g_ping._options->ttl = 64;
+    g_ping._options->count = 0;
+    g_ping._options->verbose = 0;
+    g_ping._options->flood = 0;
+    g_ping._options->noreverse = 0;
+    g_ping._options->preload = 0;
+}
+
+static void initialize_time()
+{
+    memset(&g_ping._time->start_time, 0, sizeof(struct timeval));
+    memset(&g_ping._time->end_time, 0, sizeof(struct timeval));
+    memset(&g_ping._time->send_time, 0, sizeof(struct timeval));
+}
+
+static void init_ping()
+{
+    g_ping._sockfd = 0;
+    g_ping._host = NULL;
+    g_ping._ip = NULL;
+    g_ping._dns = NULL;
+    g_ping._packets_sent = 0;
+    g_ping._packets_received = 0;
+
+    allocate_memory_for_structs();
+    check_memory_allocation();
+
+    initialize_rtt();
+    initialize_options();
+    initialize_time();
+}
+
+int main(int ac, char **av)
+{
+    if (geteuid() != 0) {
+        fprintf(stderr, "This program must be run as root. Please try again with 'sudo'.\n");
+        exit(EXIT_FAILURE);
+    }
+    init_ping();
+    parse_options(ac, av);
+    dns_lookup();
+    signal(SIGINT, sig_handler);
+    icmp_loop();
+    free_all();
     return 0;
 }

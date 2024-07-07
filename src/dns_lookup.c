@@ -6,48 +6,55 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/06 17:42:26 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/06 17:42:33 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/07 14:36:00 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_ping.h"
 
-void reverse_dns_lookup(struct s_ping *ping) {
+static void reverse_dns_lookup(const char *ip_address) {
     struct sockaddr_in addr;
-    socklen_t len = sizeof(addr);
-    char *hostname = malloc(NI_MAXHOST * sizeof(char));
+    char hostname[NI_MAXHOST];
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(ping->_ip);
-
-    if (getnameinfo((struct sockaddr *)&addr, len, hostname, NI_MAXHOST, NULL, 0, 0) != 0) {
-        free(hostname);
-        exit(EXIT_FAILURE);
+    if (inet_pton(AF_INET, ip_address, &addr.sin_addr) <= 0) {
+        exit_error("Invalid IP address format");
     }
-    
-    ping->_dns = hostname;
+
+    if (getnameinfo((struct sockaddr *)&addr, sizeof(addr), hostname, NI_MAXHOST, NULL, 0, NI_NAMEREQD) != 0) {
+        exit_error("Failed to perform reverse DNS lookup");
+    }
+
+    g_ping._dns = strdup(hostname);
+    if (!g_ping._dns) {
+        exit_error("Failed to allocate memory for DNS name");
+    }
 }
 
-void dns_lookup(struct s_ping *ping)
-{
+void dns_lookup(void) {
     struct addrinfo hints, *res;
+    char ip_str[INET_ADDRSTRLEN];
 
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_RAW;
-    
-    if (getaddrinfo(ping->_host, NULL, &hints, &res) != 0)
-    {
-        fprintf(stderr, "ft_ping: %s: Name or service not known\n", ping->_host);
-        free_all(ping);
-        exit(EXIT_FAILURE);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET; // IPv4
+    hints.ai_socktype = SOCK_RAW; // Raw socket
+
+    if (getaddrinfo(g_ping._host, NULL, &hints, &res) != 0) {
+        exit_error("Name or service not known");
     }
 
     struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
-    char *ip = inet_ntoa(ipv4->sin_addr);
+    if (!inet_ntop(AF_INET, &ipv4->sin_addr, ip_str, sizeof(ip_str))) {
+        freeaddrinfo(res);
+        exit_error("Failed to convert IP address");
+    }
     freeaddrinfo(res);
 
-    ping->_ip = ip;
-    reverse_dns_lookup(ping);
+    g_ping._ip = strdup(ip_str);
+    if (!g_ping._ip) {
+        exit_error("Failed to allocate memory for IP address");
+    }
+
+    reverse_dns_lookup(g_ping._ip);
 }

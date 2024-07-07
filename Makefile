@@ -1,18 +1,22 @@
-NAME = ft_ping
-SRC = src/ft_ping.c src/parse_options.c src/dns_lookup.c src/utils.c
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -I
-INCLUDE = include
+CFLAGS = -Wall -Wextra -Werror -I include
+LDFLAGS = -lm
+
+SRC = src/ft_ping.c src/parse_options.c src/dns_lookup.c src/utils.c src/send_ping.c
+OBJ = $(SRC:.c=.o)
+NAME = ft_ping
 
 all: $(NAME)
 
-$(NAME):
-	$(CC) $(CFLAGS) $(INCLUDE) $(SRC) -o $(NAME)
+$(NAME): $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $@ $(LDFLAGS)
 
 clean:
-	rm -rf $(NAME)
+	rm -f $(OBJ)
 
+fclean: clean
+	rm -f $(NAME)
 
-re: clean all
+re: fclean all
 
-.PHONY: all clean re
+.PHONY: all clean fclean re

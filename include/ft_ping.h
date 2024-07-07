@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 11:31:44 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/06 17:49:26 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/07 14:15:57 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,8 +27,24 @@
 # include <time.h>
 # include <errno.h>
 # include <ctype.h>
+# include <signal.h>
+# include <math.h>
+# include <float.h>
+# include <sys/select.h>
 
 # define PKT_SIZE 56
+
+struct ping_pkt {
+    struct icmphdr hdr;
+    unsigned short id;
+    char msg[PKT_SIZE];
+};
+
+struct s_time {
+    struct timeval start_time;
+    struct timeval end_time;
+    struct timeval send_time;
+};
 
 struct s_options {
     int count;
@@ -39,21 +55,35 @@ struct s_options {
     int preload;
 };
 
+struct s_rtt {
+    double min_rtt;
+    double max_rtt;
+    double total_rtt;
+    double total_rtt_squared;
+    double total_time_ms;
+    int count;
+};
+
 struct s_ping {
     int _sockfd;
-    struct s_options *_options;
+    int _packets_sent;
+    int _packets_received;
     char *_host;
     char *_dns;
     char *_ip;
-    char *_packet[PKT_SIZE];
+    struct s_rtt *_rtt;
+    struct s_time *_time;
+    struct s_options *_options;
 };
 
-struct s_ping init_ping(void);
-void parse_options(int ac, char **av, struct s_ping *ping);
-void dns_resolver(struct s_ping *ping);
-void free_all(struct s_ping *ping);
-void dns_lookup(struct s_ping *ping);
+extern struct s_ping g_ping;
+
+void parse_options(int ac, char **av);
+void exit_error(char *err_msg);
+void free_all(void);
 void print_usage(void);
-void check_numeric_options(char **av, int ac, int *i);
+void dns_lookup(void);
+void icmp_loop(void);
+void print_statistics(void);
 
 #endif
