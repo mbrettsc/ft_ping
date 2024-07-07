@@ -6,13 +6,14 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/06 17:42:26 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/07 14:36:00 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/07 14:41:25 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_ping.h"
 
-static void reverse_dns_lookup(const char *ip_address) {
+static void reverse_dns_lookup(const char *ip_address)
+{
     struct sockaddr_in addr;
     char hostname[NI_MAXHOST];
 
@@ -32,7 +33,8 @@ static void reverse_dns_lookup(const char *ip_address) {
     }
 }
 
-void dns_lookup(void) {
+void dns_lookup(void)
+{
     struct addrinfo hints, *res;
     char ip_str[INET_ADDRSTRLEN];
 

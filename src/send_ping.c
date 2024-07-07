@@ -6,13 +6,14 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/07 12:26:48 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/07 14:33:08 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/07 14:40:57 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_ping.h"
 
-static void print_socket_info(void) {
+static void print_socket_info(void)
+{
     printf("ping: sock4.fd: %d (socktype: SOCK_RAW)(socktype: SOCK_RAW), hints.ai_family: AF_UNSPEC\n", g_ping._sockfd);
     printf("\nai->ai_family: AF_INET");
     printf(", ai->ai_canonname: '%s'\n", g_ping._host);
@@ -73,7 +74,8 @@ void print_statistics(void)
     }
 }
 
-static void setup_socket(void) {
+static void setup_socket(void)
+{
     if ((g_ping._sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)) == -1) {
         exit_error("failed to open socket fd");
     }
@@ -114,7 +116,8 @@ static void send_ping(int sequence_number)
     g_ping._packets_sent++;
 }
 
-static void handle_received_packet(char *recv_buffer) {
+static void handle_received_packet(char *recv_buffer)
+{
     struct timeval receive_time;
     gettimeofday(&receive_time, NULL);
 
@@ -156,7 +159,8 @@ static void handle_received_packet(char *recv_buffer) {
     g_ping._packets_received++;
 }
 
-static void receive_ping() {
+static void receive_ping()
+{
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(g_ping._sockfd, &readfds);
