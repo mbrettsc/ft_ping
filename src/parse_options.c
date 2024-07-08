@@ -6,13 +6,19 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/06 17:41:36 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/07 15:50:41 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/08 13:40:55 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_ping.h"
 
-static int is_whole_num(const char *str)
+
+/**
+ * @brief Check if a string is a whole number
+ * 
+ * @param str The string to check
+ */
+static inline int is_whole_num(const char *str)
 {
     for (int i = 0; str[i]; ++i) {
         if (!isdigit(str[i])) {
@@ -22,7 +28,15 @@ static int is_whole_num(const char *str)
     return 1;
 }
 
-static void check_numeric_options(char **av, int ac, int *i)
+
+/**
+ * @brief Check if the options that require a numeric argument are valid
+ * 
+ * @param av The arguments
+ * @param ac The number of arguments
+ * @param i The index of the current argument
+ */
+static inline void check_numeric_options(char **av, int ac, int *i)
 {
     if (*i + 1 >= ac) {
         fprintf(stderr, "Error: Missing argument for %s\n", av[*i]);
@@ -37,44 +51,73 @@ static void check_numeric_options(char **av, int ac, int *i)
     }
 }
 
-static void options(char **av, int ac, int *i)
+
+/**
+ * @brief Parse the command line options
+ * 
+ * @param ac The number of arguments
+ * @param av The arguments
+ */
+static inline void options(char **av, int ac, int *i)
 {
     if (strcmp(av[*i], "-v") == 0) {
         g_ping._options->verbose = 1;
-    } else if (strcmp(av[*i], "-?") == 0) {
+    }
+    else if (strcmp(av[*i], "-?") == 0) {
         print_usage();
         exit(EXIT_SUCCESS);
-    } else if (strcmp(av[*i], "-t") == 0) {
+    }
+    else if (strncmp(av[*i], "--ttl=", 6) == 0) {
+        char *tmp = av[*i] + 6;
+        if (is_whole_num(tmp) == 0)
+            exit_error("ttl value must be a positive integer");
+        int ttl_value = atoi(tmp);
+        if (ttl_value <= 0 || ttl_value >= 256) {
+            exit_error("option value too small or too big");
+        }
+        g_ping._options->ttl = ttl_value;
+    }
+    else if (strcmp(av[*i], "-w") == 0) {
         check_numeric_options(av, ac, i);
-        g_ping._options->ttl = atoi(av[*i]);
-    } else if (strcmp(av[*i], "-f") == 0) {
-        g_ping._options->flood = 1;
-    } else if (strcmp(av[*i], "-n") == 0) {
-        g_ping._options->noreverse = 1;
-    } else if (strcmp(av[*i], "-l") == 0) {
+        g_ping._options->timeout = atoi(av[*i]);
+        if (g_ping._options->timeout < 1) {
+            exit_error("timeout value must be a positive integer");
+        }
+    }
+    else if (strcmp(av[*i], "-l") == 0) {
         check_numeric_options(av, ac, i);
         g_ping._options->preload = atoi(av[*i]);
-    } else if (strcmp(av[*i], "-c") == 0) {
+    }
+    else if (strcmp(av[*i], "-c") == 0) {
         check_numeric_options(av, ac, i);
         g_ping._options->count = atoi(av[*i]);
         if (g_ping._options->count < 1) {
-            fprintf(stderr, "Error: -c argument must be greater than 0\n");
-            exit(EXIT_FAILURE);
+            exit_error("count value must be a positive integer");
         }
-    } else {
-        fprintf(stderr, "Error: Unknown option %s\n", av[*i]);
+        
+    }
+    else if (strcmp(av[*i], "-q") == 0) {
+        g_ping._options->quiet = 1;
+    }
+    else {
         print_usage();
-        exit(EXIT_FAILURE);
+        exit_error("unkown option");
     }
 }
 
+
+/**
+ * @brief Parse the command line options
+ * 
+ * @param ac The number of arguments
+ * @param av The arguments
+ */
 void parse_options(int ac, char **av)
 {
     int i = 1, host_flag = 0;
 
     if (ac < 2) {
-        fprintf(stderr, "ft_ping: missing host operand\nTry 'ping -?' for more information.\n");
-        exit(EXIT_FAILURE);
+        exit_error("missing host operand\nTry 'ping --help' or 'ping --usage' for more information.");
     }
     
     while (i < ac) {
@@ -82,8 +125,7 @@ void parse_options(int ac, char **av)
             options(av, ac, &i);
         } else {
             if (host_flag) {
-                fprintf(stderr, "Error: Multiple hosts not allowed\n");
-                exit(EXIT_FAILURE);
+                exit_error("multiple host not allowed");
             }
             g_ping._host = av[i];
             host_flag = 1;
@@ -92,12 +134,10 @@ void parse_options(int ac, char **av)
     }
 
     if (!host_flag) {
-        fprintf(stderr, "Error: No host specified\n");
-        exit(EXIT_FAILURE);
+        exit_error("No host specified");
     }
 
     if (geteuid() != 0) {
-        fprintf(stderr, "ft_ping: Lacking privilege for icmp socket.\n");
-        exit(EXIT_FAILURE);
+        exit_error("Lacking privilege for icmp socket.");
     }
 }

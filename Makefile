@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Werror -I include
 LDFLAGS = -lm
 
-SRC = src/ft_ping.c src/parse_options.c src/dns_lookup.c src/utils.c src/send_ping.c
+SRC = src/ft_ping.c src/parse_options.c src/utils.c src/send_ping.c
 OBJ = $(SRC:.c=.o)
 NAME = ft_ping
 

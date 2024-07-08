@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 11:31:44 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/07 14:15:57 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/08 13:27:49 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,27 +34,62 @@
 
 # define PKT_SIZE 56
 
+/**
+ * @brief Structure to hold the ICMP packet
+ * 
+ * @param hdr The ICMP header
+ * @param id The ICMP packet ID
+ * @param msg The ICMP packet message
+ */
 struct ping_pkt {
     struct icmphdr hdr;
     unsigned short id;
     char msg[PKT_SIZE];
 };
 
+
+/**
+ * @brief Structure to hold the time values
+ * 
+ * @param start_time The start time of the ping
+ * @param end_time The end time of the ping
+ * @param send_time The time the packet was sent
+ */
 struct s_time {
     struct timeval start_time;
     struct timeval end_time;
     struct timeval send_time;
 };
 
+/**
+ * @brief Structure to hold the options
+ * 
+ * @param count The number of packets to send
+ * @param ttl The time to live
+ * @param verbose The verbose flag
+ * @param quiet The quiet flag
+ * @param timeout The timeout value
+ * @param preload The number of packets to send at once
+ */
 struct s_options {
     int count;
-    int noreverse;
     int ttl;
     int verbose;
-    int flood;
+    int quiet;
+    int timeout;
     int preload;
 };
 
+/**
+ * @brief Structure to hold the round trip time values
+ * 
+ * @param min_rtt The minimum round trip time
+ * @param max_rtt The maximum round trip time
+ * @param total_rtt The total round trip time
+ * @param total_rtt_squared The total round trip time squared
+ * @param total_time_ms The total time in milliseconds
+ * @param count The number of packets sent
+ */
 struct s_rtt {
     double min_rtt;
     double max_rtt;
@@ -64,6 +99,20 @@ struct s_rtt {
     int count;
 };
 
+
+/**
+ * @brief Structure to hold the ping values
+ * 
+ * @param _sockfd The socket file descriptor
+ * @param _packets_sent The number of packets sent
+ * @param _packets_received The number of packets received
+ * @param _host The host name
+ * @param _dns The DNS name
+ * @param _ip The IP address
+ * @param _rtt The round trip time values
+ * @param _time The time values
+ * @param _options The options
+ */
 struct s_ping {
     int _sockfd;
     int _packets_sent;
@@ -82,7 +131,6 @@ void parse_options(int ac, char **av);
 void exit_error(char *err_msg);
 void free_all(void);
 void print_usage(void);
-void dns_lookup(void);
 void icmp_loop(void);
 void print_statistics(void);
 
