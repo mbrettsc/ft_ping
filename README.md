@@ -13,7 +13,7 @@
 
 ## Installation
  To build and install `ft_ping`, follow these steps: 
- 1. **Clone the repository**: ```bash git clone https://github.com/yourusername/ft_ping.git cd ft_ping ``` 
+ 1. **Clone the repository**: ```bash git clone https://github.com/mbrettsc/ft_ping.git cd ft_ping ``` 
  2. **Build the project**: ```bash make ```
     
 ## Usage 
