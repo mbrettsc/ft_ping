@@ -2,7 +2,7 @@
 
 ## Overview
 
-`ft_ping` is a custom implementation of the classic `ping` command, designed to test the accessibility and measure the round-trip time (RTT) of messages sent to another machine over an IP network.
+`ft_ping` is a custom implementation of the classic `ping` (inetutils-2.0) command, designed to test the accessibility and measure the round-trip time (RTT) of messages sent to another machine over an IP network.
 
 ## Features
 
