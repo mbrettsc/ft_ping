@@ -17,4 +17,4 @@
  2. **Build the project**: ```make```
     
 ## Usage 
-Run the `ft_ping` executable with the desired options and target: ```bash ./ft_ping [options] [destination]
+Run the `ft_ping` executable with the desired options and target: ```bash ./ft_ping [options] [destination]```
