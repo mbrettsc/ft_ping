@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/07 12:26:48 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/08 14:01:18 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/08 14:40:03 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -193,17 +193,20 @@ static inline void print_packet_info(struct iphdr *ip_hdr, struct icmphdr *icmp_
                 ntohs(original_ip_hdr->check),
                 inet_ntoa(original_src_ip),
                 inet_ntoa(original_dst_ip));
-        } else if (icmp_hdr->type == ICMP_ECHOREPLY || icmp_hdr->type == ICMP_ECHO) {
+        }
+        else if (icmp_hdr->type == ICMP_ECHOREPLY || icmp_hdr->type == ICMP_ECHO) {
             printf("%ld bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
                 ntohs(ip_hdr->tot_len) - (ip_hdr->ihl * 4) - sizeof(struct icmphdr) - 4,
                 g_ping._ip,
                 icmp_sequence,
                 ip_hdr->ttl,
                 rtt_ms);
-        } else {
+        }
+        else {
             fprintf(stderr, "Unknown ICMP type: %d in verbose mode.\n", icmp_hdr->type);
         }
-    } else {
+    }
+    else {
         if (icmp_hdr->type == ICMP_ECHOREPLY || icmp_hdr->type == ICMP_ECHO) {
             printf("%ld bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
                 ntohs(ip_hdr->tot_len) - (ip_hdr->ihl * 4) - sizeof(struct icmphdr) - 4,
@@ -211,7 +214,8 @@ static inline void print_packet_info(struct iphdr *ip_hdr, struct icmphdr *icmp_
                 icmp_sequence,
                 ip_hdr->ttl,
                 rtt_ms);
-        } else if (icmp_hdr->type == ICMP_TIME_EXCEEDED) {
+        }
+        else if (icmp_hdr->type == ICMP_TIME_EXCEEDED) {
             struct iphdr *original_ip_hdr = (struct iphdr *)((char *)ip_hdr + ip_header_length + sizeof(struct icmphdr));
             struct in_addr original_src_ip;
 
@@ -219,7 +223,8 @@ static inline void print_packet_info(struct iphdr *ip_hdr, struct icmphdr *icmp_
             printf("%d bytes from (%s): Time to live exceeded\n",
                 ntohs(ip_hdr->tot_len) - ip_header_length,
                 inet_ntoa(original_src_ip));
-        } else {
+        }
+        else {
             fprintf(stderr, "Unknown ICMP type: %d\n", icmp_hdr->type);
         }
     }
@@ -341,11 +346,10 @@ int check_timeout(void)
 void icmp_loop(void)
 {
     setup_socket();
-    if (g_ping._options->verbose == 1) {
+    if (g_ping._options->verbose == 1)
         printf("PING %s (%s): %d data bytes, id 0x%x = %d\n", g_ping._host, g_ping._ip, PKT_SIZE, getpid(), getpid());
-    } else {
+    else
         printf("PING %s (%s): %d data bytes\n", g_ping._host, g_ping._ip, PKT_SIZE);
-    }
     gettimeofday(&g_ping._time->start_time, NULL);
     for (int sequence_number = 0; g_ping._options->count == -1 || sequence_number < g_ping._options->count; ++sequence_number) {
         send_ping(sequence_number);
@@ -353,9 +357,10 @@ void icmp_loop(void)
 
         if (sequence_number == g_ping._options->count - 1)
             break;
-        if (g_ping._options->preload == -1) {
+        
+        if (g_ping._options->preload == -1)
             sleep(1);
-        } else if (sequence_number >= g_ping._options->preload) {
+        else if (sequence_number >= g_ping._options->preload) {
             g_ping._options->preload = 0;
             sleep(1);
         }

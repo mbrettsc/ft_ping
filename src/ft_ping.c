@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/04 11:31:40 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/08 13:36:36 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/08 14:34:57 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,6 +57,9 @@ static void sig_handler(int signo)
     (void)signo;
     print_statistics();
     free_all();
+    if (g_ping._sockfd > 0) {
+        close(g_ping._sockfd);
+    }
     exit(EXIT_SUCCESS);
 }
 
@@ -157,5 +160,6 @@ int main(int ac, char **av)
     signal(SIGINT, sig_handler);
     icmp_loop();
     free_all();
+    close(g_ping._sockfd);
     return 0;
 }

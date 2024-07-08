@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/06 12:18:08 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/08 13:41:09 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/08 14:36:31 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,9 @@ inline void exit_error(char *err_msg)
 {
     free_all();
     fprintf(stderr, "ft_ping: error: %s\n", err_msg);
+    if (g_ping._sockfd > 0) {
+        close(g_ping._sockfd);
+    }
     exit(EXIT_FAILURE);
 }
 
@@ -64,5 +67,9 @@ void free_all(void)
     if (g_ping._time != NULL) {
         free(g_ping._time);
         g_ping._time = NULL;
+    }
+    if (g_ping._ip != NULL) {
+        free(g_ping._ip);
+        g_ping._ip = NULL;
     }
 }
