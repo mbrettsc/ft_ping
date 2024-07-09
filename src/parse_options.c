@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/06 17:41:36 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/08 13:40:55 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/09 06:05:37 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,8 +79,8 @@ static inline void options(char **av, int ac, int *i)
     }
     else if (strcmp(av[*i], "-w") == 0) {
         check_numeric_options(av, ac, i);
-        g_ping._options->timeout = atoi(av[*i]);
-        if (g_ping._options->timeout < 1) {
+        g_ping._options->timeout = atoi(av[*i]) - 1;
+        if (g_ping._options->timeout < 0) {
             exit_error("timeout value must be a positive integer");
         }
     }

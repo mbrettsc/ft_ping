@@ -6,7 +6,7 @@
 /*   By: mbrettsc <mbrettsc@student.42wolfsburg.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/07 12:26:48 by mbrettsc          #+#    #+#             */
-/*   Updated: 2024/07/08 15:02:16 by mbrettsc         ###   ########.fr       */
+/*   Updated: 2024/07/09 07:09:14 by mbrettsc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,7 +87,7 @@ void print_statistics(void)
            packets_received,
            (int) packet_lost);
     if (g_ping._rtt->count > 0) {
-        printf("rount-trip min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms\n",
+        printf("rount-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
             g_ping._rtt->min_rtt, avg_rtt, g_ping._rtt->max_rtt, mdev_rtt);
     }
 }
@@ -136,6 +136,7 @@ static void send_ping(int sequence_number)
 
     struct ping_pkt pckt;
     memset(&pckt, 0, sizeof(pckt));
+    pckt.hdr.code = 0;
     pckt.hdr.type = ICMP_ECHO;
     pckt.hdr.un.echo.id = getpid();
     pckt.hdr.un.echo.sequence = sequence_number;
@@ -147,7 +148,7 @@ static void send_ping(int sequence_number)
         exit_error("failed to send packet");
     }
 
-    g_ping._packets_sent++;
+    ++g_ping._packets_sent;
 }
 
 
@@ -165,6 +166,9 @@ static void send_ping(int sequence_number)
 static inline void print_packet_info(struct iphdr *ip_hdr, struct icmphdr *icmp_hdr, double rtt_ms, int icmp_sequence)
 {
     int ip_header_length = ip_hdr->ihl * 4;
+    int icmp_header_length = sizeof(struct icmphdr);
+    int total_length = ntohs(ip_hdr->tot_len);
+    int payload_length = total_length - ip_header_length - icmp_header_length;
 
     if (strcmp(g_ping._ip, "127.0.0.1") == 0 || strcmp(g_ping._ip, "localhost") == 0) {
         icmp_sequence = g_ping._packets_sent - 1;
@@ -178,9 +182,16 @@ static inline void print_packet_info(struct iphdr *ip_hdr, struct icmphdr *icmp_
             original_src_ip.s_addr = original_ip_hdr->saddr;
             original_dst_ip.s_addr = original_ip_hdr->daddr;
 
+            icmp_sequence = g_ping._packets_sent - 1;
+
+            // Hex dump of the original IP header for comparison
+            unsigned char *data = (unsigned char *)original_ip_hdr;
             printf("IP Hdr Dump:\n");
-            printf("Vr HL TOS  Len   ID Flg  off TTL Pro  cks    Src            Dst\n");
-            printf(" %1x  %1x  %02x  %04x %04x  %02x  %04x %02x  %04x  %d  %s   %s\n",
+            for (int i = 0; i < 20; i += 2) {
+                printf("%02x%02x ", data[i], data[i + 1]);
+            }
+            printf("\nVr HL TOS  Len   ID Flg  off TTL Pro  cks      Src            Dst\n");
+            printf(" %1x  %1x  %02x %04x %04x   %1x %04x  %02x %04x %d %s %s\n",
                 original_ip_hdr->version,
                 original_ip_hdr->ihl,
                 original_ip_hdr->tos,
@@ -193,10 +204,17 @@ static inline void print_packet_info(struct iphdr *ip_hdr, struct icmphdr *icmp_
                 ntohs(original_ip_hdr->check),
                 inet_ntoa(original_src_ip),
                 inet_ntoa(original_dst_ip));
+
+            printf("ICMP: type = %d, code = %d, size %d, id 0x%04x, seq 0x%04x\n",
+                icmp_hdr->type,
+                icmp_hdr->code,
+                ntohs(ip_hdr->tot_len) - ip_header_length,
+                ntohs(icmp_hdr->un.echo.id),
+                icmp_sequence);
         }
         else if (icmp_hdr->type == ICMP_ECHOREPLY || icmp_hdr->type == ICMP_ECHO) {
-            printf("%ld bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
-                ntohs(ip_hdr->tot_len) - (ip_hdr->ihl * 4) - sizeof(struct icmphdr) - 4,
+            printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
+                payload_length + icmp_header_length - 4,
                 g_ping._ip,
                 icmp_sequence,
                 ip_hdr->ttl,
@@ -208,20 +226,20 @@ static inline void print_packet_info(struct iphdr *ip_hdr, struct icmphdr *icmp_
     }
     else {
         if (icmp_hdr->type == ICMP_ECHOREPLY || icmp_hdr->type == ICMP_ECHO) {
-            printf("%ld bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
-                ntohs(ip_hdr->tot_len) - (ip_hdr->ihl * 4) - sizeof(struct icmphdr) - 4,
+            printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
+                payload_length + icmp_header_length - 4,
                 g_ping._ip,
                 icmp_sequence,
                 ip_hdr->ttl,
                 rtt_ms);
         }
         else if (icmp_hdr->type == ICMP_TIME_EXCEEDED) {
-            struct iphdr *original_ip_hdr = (struct iphdr *)((char *)ip_hdr + ip_header_length + sizeof(struct icmphdr));
+            struct iphdr *original_ip_hdr = (struct iphdr *)((char *)ip_hdr + ip_header_length + icmp_header_length);
             struct in_addr original_src_ip;
 
             original_src_ip.s_addr = original_ip_hdr->saddr;
             printf("%d bytes from (%s): Time to live exceeded\n",
-                ntohs(ip_hdr->tot_len) - ip_header_length,
+                payload_length + icmp_header_length - 4,
                 inet_ntoa(original_src_ip));
         }
         else {
@@ -249,67 +267,7 @@ static void update_rtt_stats(double rtt_ms)
         g_ping._rtt->max_rtt = rtt_ms;
     }
     g_ping._rtt->total_rtt_squared += rtt_ms * rtt_ms;
-    g_ping._rtt->count++;
-}
-
-
-/**
- * @brief Handles a received packet.
- * 
- * This function handles a received packet. It calculates the round-trip time of the packet, updates the round-trip
- * time statistics, and prints the information of the packet.
- * 
- * @param recv_buffer The buffer containing the received packet.
- */
-static inline void handle_received_packet(char *recv_buffer)
-{
-    struct timeval receive_time;
-    gettimeofday(&receive_time, NULL);
-
-    double rtt_ms = time_difference(&g_ping._time->send_time, &receive_time);
-    update_rtt_stats(rtt_ms);
-    
-
-    struct iphdr *ip_hdr = (struct iphdr *)recv_buffer;
-    struct icmphdr *icmp_hdr = (struct icmphdr *)(recv_buffer + (ip_hdr->ihl * 4));
-    int icmp_sequence = icmp_hdr->un.echo.sequence;
-    
-    if (g_ping._options->quiet == 1) return;
-
-    print_packet_info(ip_hdr, icmp_hdr, rtt_ms, icmp_sequence);
-}
-
-
-/**
- * @brief Receives a ping packet.
- * 
- * This function receives a ping packet. It sets up the file descriptor set for the socket, and waits for a packet
- * to be received. If a packet is received, it reads the packet into a buffer, and handles the received packet.
- * 
- */
-static void receive_ping()
-{
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(g_ping._sockfd, &readfds);
-
-    struct timeval timeout = {1, 0};
-    int select_ret = select(g_ping._sockfd + 1, &readfds, NULL, NULL, &timeout);
-    if (select_ret < 0) {
-        exit_error("select failed");
-    }
-
-    if (FD_ISSET(g_ping._sockfd, &readfds)) {
-        char recv_buffer[84];
-        struct sockaddr_in recv_addr;
-        socklen_t addr_len = sizeof(recv_addr);
-
-        int bytes_received = recvfrom(g_ping._sockfd, recv_buffer, sizeof(recv_buffer), 0, (struct sockaddr *)&recv_addr, &addr_len);
-        if (bytes_received > 0) {
-            g_ping._packets_received++;
-            handle_received_packet(recv_buffer);
-        }
-    }
+    ++g_ping._rtt->count;
 }
 
 
@@ -333,6 +291,76 @@ int check_timeout(void)
         return 0;
     }
     return 1;
+}
+
+
+/**
+ * @brief Handles a received packet.
+ * 
+ * This function handles a received packet. It calculates the round-trip time of the packet, updates the round-trip
+ * time statistics, and prints the information of the packet.
+ * 
+ * @param recv_buffer The buffer containing the received packet.
+ */
+static inline void handle_received_packet(char *recv_buffer)
+{
+    struct timeval receive_time;
+    gettimeofday(&receive_time, NULL);
+
+    double rtt_ms = time_difference(&g_ping._time->send_time, &receive_time);
+    update_rtt_stats(rtt_ms);
+    
+
+    struct iphdr *ip_hdr = (struct iphdr *)recv_buffer;
+    struct icmphdr *icmp_hdr = (struct icmphdr *)(recv_buffer + (ip_hdr->ihl * 4));
+    int icmp_sequence = icmp_hdr->un.echo.sequence;
+
+    if (icmp_hdr->type == ICMP_ECHO || icmp_hdr->type == ICMP_ECHOREPLY) {
+        ++g_ping._packets_received;
+    }
+    
+    if (g_ping._options->quiet == 1) return;
+
+    print_packet_info(ip_hdr, icmp_hdr, rtt_ms, icmp_sequence);
+}
+
+
+/**
+ * @brief Receives a ping packet.
+ * 
+ * This function receives a ping packet. It sets up the file descriptor set for the socket, and waits for a packet
+ * to be received. If a packet is received, it reads the packet into a buffer, and handles the received packet.
+ * 
+ */
+static void receive_ping()
+{
+    if (g_ping._options->timeout != -1) {
+        if (check_timeout() == 0) {
+            print_statistics();
+            free_all();
+            exit(EXIT_FAILURE);
+        }
+    }
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(g_ping._sockfd, &readfds);
+
+    struct timeval timeout = {1, 0};
+    int select_ret = select(g_ping._sockfd + 1, &readfds, NULL, NULL, &timeout);
+    if (select_ret < 0) {
+        exit_error("select failed");
+    }
+
+    if (FD_ISSET(g_ping._sockfd, &readfds)) {
+        char recv_buffer[84];
+        struct sockaddr_in recv_addr;
+        socklen_t addr_len = sizeof(recv_addr);
+
+        int bytes_received = recvfrom(g_ping._sockfd, recv_buffer, sizeof(recv_buffer), 0, (struct sockaddr *)&recv_addr, &addr_len);
+        if (bytes_received > 0) {
+            handle_received_packet(recv_buffer);
+        }
+    }
 }
 
 
@@ -363,11 +391,6 @@ void icmp_loop(void)
         else if (sequence_number >= g_ping._options->preload) {
             g_ping._options->preload = 0;
             sleep(1);
-        }
-        if (g_ping._options->timeout != -1) {
-            if (check_timeout() == 0) {
-                break;
-            }
         }
     }
     print_statistics();
